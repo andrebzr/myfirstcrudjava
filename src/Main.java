@@ -1,3 +1,6 @@
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -58,6 +61,19 @@ public class Main {
 	            	System.out.println("Erro: Preco nao pode ser negativo!");
 	            	break;
 	            }
+	            
+	            try (Connection conexao = Conexao.conectar()) {
+	            	String sql = "INSERT INTO produtos (nome, preco) VALUES (?, ?)";
+	            	PreparedStatement stmt = conexao.prepareStatement(sql);
+	            	stmt.setString(1, nome);
+	            	stmt.setDouble(2, preco);
+	            	stmt.executeUpdate();
+	            	System.out.println("Produto cadastrado com sucesso!");
+	            } catch (SQLException e) {
+	            	System.out.println("Erro ao cadastrar: " + e.getMessage());
+	            	
+	            } 
+	            break;
 	            
 	            int id = produtos.size() + 1;
 	            Produto novoProduto = new Produto(id, nome, preco);

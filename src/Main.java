@@ -1,5 +1,6 @@
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,75 +73,103 @@ public class Main {
 	            } catch (SQLException e) {
 	            	System.out.println("Erro ao cadastrar: " + e.getMessage());
 	            	
-	            } 
-	            break;
+	            } break;
 	            
-	            int id = produtos.size() + 1;
-	            Produto novoProduto = new Produto(id, nome, preco);
-	            produtos.add(novoProduto);
-	            
-	            System.out.println("Produto cadastrado com sucesso!");
-	            
-	            break;
 	        case 2:
-	            if (produtos.isEmpty()) {
-	            	System.out.println("Nenhum produto cadastrado");
-	            } else {
-	            	System.out.println("\n --- Lista de produtos ---");
-	            	for (Produto p : produtos) {
-	            		System.out.println(p);
-	            	}
+	            try (Connection conexao = Conexao.conectar()) {
+	                String sql = "SELECT * FROM produtos";
+	                PreparedStatement stmt = conexao.prepareStatement(sql);
+	                ResultSet rs = stmt.executeQuery();
+
+	                System.out.println("\n--- Lista de produtos ---");
+	                boolean encontrouAlgum = false;
+	                while (rs.next()) {
+	                    encontrouAlgum = true;
+	                    int id = rs.getInt("id");
+	                    String nomeProduto = rs.getString("nome");
+	                    double precoProduto = rs.getDouble("preco");
+	                    System.out.println("ID: " + id + " | Nome: " + nomeProduto + " | Preço: R$ " + precoProduto);
+	                }
+	                if (!encontrouAlgum) {
+	                    System.out.println("Nenhum produto cadastro!");
+	                }
+	            } catch (SQLException e) {
+	                System.out.println("Erro ao listar: " + e.getMessage());
 	            }
-	            
 	            break;
-	        case 3: 
-	        	System.out.println("Digite o ID do produto que deseja atualizar: ");
-	        	int idAtualizar = scanner.nextInt();
-	        	
-	        	Produto produtoEncontrado = null;
-	        	for (Produto p : produtos);{
-	        		Produto p = null;
-					if (p.getId() == idAtualizar) {
-	        			produtoEncontrado = p;
-	        			break;
-	        		}
-	        	}
-	        	
-			if (produtoEncontrado == null) {
-				System.out.println("Produto nao encontrado");
-			} else {
-				System.out.println("Digite o novo nome: ");
-				scanner.nextLine();
-				String novoNome = scanner.nextLine();
-				
-				System.out.println("Digite o novo preeco");
-				double novoPreco = scanner.nextDouble();
-				
-				produtoEncontrado.setNome(novoNome);
-				produtoEncontrado.setPreco(novoPreco);
-				
-				System.out.println("Produto atualizado com sucesso!");
-    
-			}
+	            
+	           
+	            
+		case 3: 
+	        	System.out.print("Digite o ID do produto que deseja atualizar: ");
+	            int idAtualizar;
+	            try {
+	                idAtualizar = scanner.nextInt();
+	            } catch (Exception e) {
+	                System.out.println("Erro: digite um ID válido!");
+	                scanner.nextLine();
+	                break;
+	            }
+
+	            System.out.print("Digite o novo nome: ");
+	            scanner.nextLine();
+	            String novoNome = scanner.nextLine();
+
+	            System.out.print("Digite o novo preço: ");
+	            double novoPreco;
+	            try {
+	                novoPreco = scanner.nextDouble();
+	            } catch (Exception e) {
+	                System.out.println("Erro: digite um valor numérico válido!");
+	                scanner.nextLine();
+	                break;
+	            }
+
+	            try (Connection conexao = Conexao.conectar()) {
+	                String sql = "UPDATE produtos SET nome = ?, preco = ? WHERE id = ?";
+	                PreparedStatement stmt = conexao.prepareStatement(sql);
+	                stmt.setString(1, novoNome);
+	                stmt.setDouble(2, novoPreco);
+	                stmt.setInt(3, idAtualizar);
+
+	                int linhasAfetadas = stmt.executeUpdate();
+
+	                if (linhasAfetadas > 0) {
+	                    System.out.println("Produto atualizado com sucesso!");
+	                } else {
+	                    System.out.println("Produto não encontrado.");
+	                }
+	            } catch (SQLException e) {
+	                System.out.println("Erro ao atualizar: " + e.getMessage());
+	            }
 			break;
 	        case 4:
 	        	System.out.println("Digite o nome do produto que deseja deletar: ");
-	        	int idDeletar = scanner.nextInt();
-	        	
-	        	Produto produtoParaDeletar = null;
-	        	for (Produto p : produtos) {
-	        		if (p.getId() == idDeletar) {
-	        			produtoParaDeletar = p;
-	        			break;
-	        		}
+	        	int idDeletar;
+	        	try {
+	        		idDeletar = scanner.nextInt();
+	        	} catch (Exception e) {
+	        		System.out.println("Erro: digite um id valido");
+	        		scanner.nextLine();
+	        	    break;
 	        	}
-	        	if (produtoParaDeletar == null) {
-	        		System.out.println("Produto nao encontrado.");
-	        	} else {
-	        		produtos.remove(produtoParaDeletar);
-	        		System.out.println("Produto deletado com sucesso.");
+	        	try (Connection conexao = Conexao.conectar()) {
+	        		String sql = "DELETE FROM produtos WHERE id = ?";
+	        		PreparedStatement stmt = conexao.prepareStatement(sql);
+	        		stmt.setInt(1, idDeletar);
+	        		
+	        		int linhasAfetadas = stmt.executeUpdate();
+	        		
+	        		if (linhasAfetadas < 0) {
+	        			System.out.println("Produto deletado com sucesso!");
+	        		} else {
+	        			System.out.println("Produto nao encontrado");
+	        		}
+	        	} catch (SQLException e) {
+	        		System.out.println("Erro ao deletar: " + e.getMessage());
 	        	}
 	        	break;
+	        	
 	        case 5:
 	        	produtos.sort(Comparator.comparingDouble(Produto::getPreco));
 	        	System.out.println("Produtos ordenados por preco (crescente)!");
@@ -156,6 +185,11 @@ public class Main {
 	    }
 	} while (opcao != 0);
 	
+	}
+
+	private static Connection conectar() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
 
